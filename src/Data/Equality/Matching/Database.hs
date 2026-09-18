@@ -168,8 +168,8 @@ elemOfAtom !x (Atom v l) = case v of
 -- described in the paper (such as batching)
 orderedVarsInQuery :: (Functor lang, Foldable lang) => Query lang -> [Var]
 orderedVarsInQuery (SelectAllQuery x) = [x]
-orderedVarsInQuery (Query _ atoms) = coerce . IS.toList . IS.fromAscList . coerce $
-                                     sortBy (compare `on` varCost)                $
+orderedVarsInQuery (Query _ atoms) = sortBy (compare `on` varCost)                $
+                                     coerce . IS.toList . IS.fromList . coerce    $
                                      mapMaybe toVar                               $
                                      foldl' f mempty atoms
     where
