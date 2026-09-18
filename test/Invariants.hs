@@ -12,6 +12,7 @@
 module Invariants where
 
 import Test.Tasty
+import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck as QC hiding (classes)
 
 import Control.Monad
@@ -95,6 +96,19 @@ ematchSingletonVar v eg =
 -- variables (the only non-variable pattern is the top one), then, altogether,
 -- we should get a list of all e-classes 
 -- genericJoinAll :: Database lang -> 
+
+-- Cross an IntSet bitmap boundary with repeated internal query variables.
+ematchDeepPattern :: Assertion
+ematchDeepPattern =
+    IS.fromList (map matchClassId matches) @?= IS.singleton root
+    where
+        graph :: EGraph () Expr
+        (root, graph) = egraph $ do
+            value <- GM.add $ Node $ Sym "x"
+            foldM (\child _ -> GM.add $ Node $ UnOp Sin child) value [1..65 :: Int]
+        pattern = iterate (pat . UnOp Sin) (VariablePattern "x") !! 65
+        (query, _) = compileToQuery pattern
+        matches = ematch (eGraphToDatabase graph) query
 
 
 -- The equivalence relation over e-nodes must be closed over congruence after rebuilding
@@ -199,6 +213,7 @@ invariants = testGroup "Invariants"
     -- TODO: Much infinite looping ...
   -- , QC.testProperty "Bench saturation @Expr" (withMaxSuccess 10 (benchSaturate @Expr rewrites symCost))
   , QC.testProperty "Singleton variable matches all" (ematchSingletonVar @SimpleExpr)
+  , testCase "Matches a deeply nested pattern" ematchDeepPattern
   , QC.testProperty "Hash Cons Invariant" (hashConsInvariant @SimpleExpr)
   , QC.testProperty "Fold all classes with x:=c" (patFoldAllClasses @SimpleExpr)
   ]
